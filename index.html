@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+form {
+  font-family: sans-serif;
+  position: absolute;
+  left: 10px;
+  top: 140px;
+}
+
+#li_1 label.choice {
+	display:inline;
+	position:relative;
+	margin-left: 0.2em;
+}
+
+#li_1 input.radio {
+	display: inline;
+	margin-left: 0.5em;
+}
+
+#intro {
+  width: 1300px
+}
+
+.legend {
+  font-family: sans-serif;
+  font-size: 10pt;
+  font-weight: bold;
+  position: absolute;
+  top: 300px;
+  left: 1330px;
+  transition: 0.4s linear all;
+  opacity: 1;
+}
+
+.legend.hidden {
+  opacity: 0;
+}
+
+.subtitle{
+  font-family: sans-serif;
+  width: 1300px;
+  position: absolute;
+  top: 70px;
+  text-align: center;
+}
+
+h1 {
+  font-family: sans-serif;
+  text-align: center;
+}
+
+label {
+  display: block;
+}
+
+/*
+#tooltip {
+  position: absolute;
+  width: 200px;
+  height: auto;
+  padding: 10px;
+  background-color: white;
+  -webkit-border-radius: 10px;
+  -moz-border-radius: 10px;
+  border-radius: 10px;
+  -webkit-box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.4);
+  -moz-box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.4);
+  box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+}
+
+#tooltip.hidden {
+  display: none;
+}
+
+#tooltip p {
+  margin: 0;
+  font-family: sans-serif;
+  font-size: 16px;
+  line-height: 20px;
+}
+
+<div id="tooltip" class="hidden">
+    <p><strong><span id="exit">100</span></strong></p>
+    <p><strong><span id="reason">100</span></strong></p>
+</div>
+
+*/
+</style>
+<div>
+  <h1 id="intro"> Student Attrition </h1>
+</div>
+<form>
+  <table>
+    <td><label><input type="radio" name="mode" value="all" checked> All students </label></td>
+    <td><label><input type="radio" name="mode" value="exited"> How many students left?</label></td>
+    <td><label><input type="radio" name="mode" value="reason"> Why did they leave? </label></td>
+  </table>
+</form>
+
+<svg width="1300" height="1000"></svg>
+<script src="https://d3js.org/d3.v4.min.js"></script>
+<script>
+
+var colorPalette = ["#ebeced", "#823e26", "#c6b859", "#ff9933", "#cc3300",
+                    "#cc6699", "#3366ff", "#ff9999", "#006666", "#339933",
+                    "#339933"]
+
+d3.csv("new_data.csv", function(error, data) {
+  dataset = data.map(function(d) {
+    return {
+      student: +d["student"], exit_reason: +d["exit_reason"]
+    }
+  });
+
+  totalLeft = 0
+  dataset.map(function(d) {(d.exit_reason > 0) ? totalLeft += 1: null})
+
+  // Exit Reason colors
+
+  var title = d3.select("body")
+                .append("h2")
+                .attr("class", "subtitle")
+                .html(dataset.length + " students started the year")
+
+  var svg = d3.select("svg"),
+      margin = {top: 10, right: 10, bottom: 10, left: 10},
+      width = +svg.attr("width") - margin.left - margin.right,
+      height = +svg.attr("height") - margin.top - margin.bottom
+
+  // workspace dimensions
+  var row_x = 40
+      row_y = 40
+      x0 = [0, row_x],
+      y0 = [0, row_y],
+      x = d3.scaleLinear().domain(x0).range([margin.left, width + margin.right]),
+      y = d3.scaleLinear().domain(y0).range([height, 0])
+
+  var xAxis = d3.axisTop(x),
+      yAxis = d3.axisRight(y)
+
+  // create student circles
+  var circle = svg.selectAll("circle")
+                  .data(dataset)
+                  .enter()
+                  .append("circle")
+                  .attr("cx", function(d) { return x((d.student - 1) % row_x) + 20})
+                  .attr("cy", function(d) { return height + margin.top - y(Math.floor((d.student - 1) / row_x)) + 100})
+                  .data(dataset.sort(function(a, b) {return parseFloat(a.exit_reason) - parseFloat(b.exit_reason)}))
+                  .attr("r", 8)
+                  .style("fill", "#3e536a")
+/*                  .on("mouseover", function(d) {
+                    d3.select("#tooltip")
+                      .style("left", (d3.event.pageX - 34) + "px")
+                      .style("top", (d3.event.pageY - 12) + "px")
+
+                    d3.select("#tooltip")
+                      .select("#reason")
+                      .text( (d.exit_reason > 0) ? d.exit_reason : d.student)
+
+                    d3.select("#tooltip").classed("hidden", false)
+                  }) */
+                  .on("click", function() {
+                      console.log("Click!")
+                  })
+/*                  .on("mouseout", function() {
+                      d3.select("#tooltip").classed("hidden", true);
+                  }) */
+
+  // Add in a legend
+  reasons = ["Did not leave", "Dropped Out", "Moved", "Academic Reasons",
+             "Social Reasons", "Redistricting", "Sibling changed schools",
+             "Transferred", "Unknown", "Other"]
+
+  var legend = d3.select("body").append("svg")
+      .attr("class", "legend")
+      .attr("width", 300)
+      .attr("height", 200)
+      .selectAll("g")
+      .data(reasons.slice())
+      .enter().append("g")
+      .attr("transform", function(d, i) { return "translate(0," + i * 20 + ")"; });
+
+  legend.append("rect")
+      .attr("width", 18)
+      .attr("height", 18)
+      .style("fill", function(d, i) {return colorPalette[i]});
+
+  legend.append("text")
+      .attr("x", 24)
+      .attr("y", 9)
+      .attr("dy", ".35em")
+      .text(function(d) { return d; });
+
+  d3.select(".legend").classed("hidden", true)
+
+  d3.selectAll("input")
+    .on("change", changed);
+
+  // Transition functions
+  function changed() {
+       if (this.value === "reason") transitionReason()
+       else if (this.value === "all") transitionAll()
+       else transitionExit()
+  }
+
+  function transitionAll() {
+    title.html(dataset.length + " students started the year")
+    d3.select(".legend").classed("hidden", true)
+    circle.transition()
+          .duration(300)
+          .attr("transform", "translate(0, 0)")
+          .style("fill", "#3e536a")
+  }
+
+  function transitionExit() {
+    title.html(totalLeft + " students (" + d3.format(".0%")(totalLeft / dataset.length) + ") " + "left before the end of the year")
+
+    d3.select(".legend").classed("hidden", true)
+    circle.transition()
+           .duration(300)
+           .attr("transform", function(d) {
+             return (
+               (d.exit_reason) > 0 ?
+               "translate(0, 20)" :
+               "translate(0, 0)")
+           })
+           .style("fill", function(d) {
+             return( d.exit_reason > 0 ?
+              "#3e536a":
+              "#ebeced")
+            })
+  }
+
+  function transitionReason() {
+    title.html("Reasons for leaving")
+
+    circle.filter(function(d) { return d.exit_reason > 1})
+    circle.transition()
+           .duration(300)
+           .style("fill", function(d) { return colorPalette[d.exit_reason]})
+           .attr("transform", function(d) {
+             return (
+               (d.exit_reason) > 0 ?
+               "translate(0, 20)" :
+               "translate(0, 0)")
+           })
+    d3.select(".legend").classed("hidden", false)
+  }
+});
+
+</script>
+</html>
