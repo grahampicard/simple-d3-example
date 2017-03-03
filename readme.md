@@ -1,4 +1,4 @@
-# D3 Attrition
+# Student Attrition using D3
 
 ## Purpose
 A simple example of D3 in a familiar school setting.
